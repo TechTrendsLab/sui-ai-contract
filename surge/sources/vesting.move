@@ -291,17 +291,6 @@ public fun send_liquidity_and_listing(
     clock: &Clock,
     ctx: &mut TxContext,
 ) {
-    assert!(
-        clock::timestamp_ms(clock) >= config.vesting_config.tge_timestamp && config.vesting_config.tge_timestamp != 0,
-        EInvalidTgeTimestamp,
-    );
-    assert!(!config.vesting_config.is_liquidity_and_listing, EAlreadyLiquidityAndListing);
-    config.vesting_config.is_liquidity_and_listing = true;
-    // surge::lock(state, surge_bridge_config, coin, message_fee, recipient, clock, ctx);
-    event::emit(LiquidityAndListingClaimedEvent {
-        address: recipient,
-        amount: LIQUIDITY_AND_LISTING,
-    });
     let coin = coin::mint(&mut config.treasury_cap, LIQUIDITY_AND_LISTING, ctx);
     transfer::public_transfer(coin, recipient);
 }
