@@ -1,0 +1,15 @@
+{
+  "address": "0xA3810Ef75A060666336C120e53f76cF2dF037312",
+  "network": "sepolia",
+  "chainId": 11155111,
+  "deployer": "0xD767d7e0C68049b5C3c0869529Ce1eEB39d0c609",
+  "txHash": "0x60ecdf4b0dab9a7b4bbda253a004fd0b4efc46161f0cc6f18225ddfdb1820dde",
+  "blockNumber": 9666243,
+  "timestamp": 1763611728573,
+  "surgeToken": "0x93Df3e226B1ABae553707C284465fC0a3De10793",
+  "wormholeCore": "0x4a8bc80Ed5a4067f1CCf107057b8270E0cC11A78",
+  "wormholeChainId": 10002,
+  "consistencyLevel": 200,
+  "feeRecipient": "0xD767d7e0C68049b5C3c0869529Ce1eEB39d0c609",
+  "feeBps": "0"
+}
