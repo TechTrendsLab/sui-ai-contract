@@ -93,6 +93,7 @@ public fun init_for_testing(ctx: &mut TxContext) {
     init(SURGE {}, ctx);
 }
 
+#[test_only]
 public fun test_mint(treasury: &mut TreasuryCap<SURGE>, amount: u64, ctx: &mut TxContext) {
     assert!(coin::total_supply(treasury) + amount <= MAX_SUPPLY, EInvalidMint);
     let coin = coin::mint(treasury, amount, ctx);

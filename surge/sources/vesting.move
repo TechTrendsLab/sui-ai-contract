@@ -6,10 +6,7 @@ use sui::event;
 use sui::table::{Self, Table};
 use surge::surge::{SURGE, SuperAdmin};
 
-const EARLY_BACKERS_ADDRESS: address = @0x1;
-const CORE_CONTRIBUTORS_ADDRESS: address = @0x2;
-const ECOSYSTEM_ADDRESS: address = @0x3;
-const COMMUNITY_ADDRESS: address = @0x4;
+const VERSION: u64 = 0;
 
 const MAX_LENGTH: u64 = 500;
 const MONTH_TIME_MS: u64 = 2629746000;
@@ -31,6 +28,7 @@ const EInvalidTgeTimestamp: u64 = 6;
 const EOverAirdropAmount: u64 = 7;
 const EAlreadyExistAdmin: u64 = 8;
 const EAlreadySetTgeTimestamp: u64 = 9;
+const EInvalidVersion: u64 = 10;
 
 public struct ACL has key {
     id: UID,
@@ -40,6 +38,7 @@ public struct ACL has key {
 
 public struct SurgeVestingState has key {
     id: UID,
+    version: u64,
     surge_address_config: SurgeAddressConfig,
     vesting_config: VestingConfig,
     current_airdrop_amount: u64,
@@ -105,6 +104,11 @@ public struct WhitelistAdminSetEvent has copy, drop {
     amount_list: vector<u64>,
 }
 
+public struct VersionUpdatedEvent has copy, drop {
+    old_version: u64,
+    new_version: u64,
+}
+
 fun init(ctx: &mut TxContext) {
     let access_control = ACL {
         id: object::new(ctx),
@@ -131,11 +135,12 @@ public fun initialize_surge_vest_state(
 
     let surge_vesting_state = SurgeVestingState {
         id: object::new(ctx),
+        version: VERSION,
         surge_address_config: SurgeAddressConfig {
-            early_backers: EARLY_BACKERS_ADDRESS,
-            core_contributors: CORE_CONTRIBUTORS_ADDRESS,
-            ecosystem: ECOSYSTEM_ADDRESS,
-            community: COMMUNITY_ADDRESS,
+            early_backers: @0x0,
+            core_contributors: @0x0,
+            ecosystem: @0x0,
+            community: @0x0,
             early_backers_can_claim_timestamp: 0,
             core_contributors_can_claim_timestamp: 0,
             ecosystem_can_claim_timestamp: 0,
@@ -156,6 +161,7 @@ public fun claim_airdrop_coin(
     clock: &Clock,
     ctx: &mut TxContext,
 ): Coin<SURGE> {
+    assert!(config.version == VERSION, EInvalidVersion);
     assert!(
         clock::timestamp_ms(clock) >= config.vesting_config.tge_timestamp && config.vesting_config.tge_timestamp != 0,
         EInvalidTgeTimestamp,
@@ -173,6 +179,7 @@ public fun claim_airdrop_coin(
 }
 
 public fun claim_airdrop(config: &mut SurgeVestingState, clock: &Clock, ctx: &mut TxContext) {
+    assert!(config.version == VERSION, EInvalidVersion);
     let coin = claim_airdrop_coin(config, clock, ctx);
     transfer::public_transfer(coin, ctx.sender());
 }
@@ -183,6 +190,7 @@ public fun send_to_early_backers(
     clock: &Clock,
     ctx: &mut TxContext,
 ) {
+    assert!(config.version == VERSION, EInvalidVersion);
     assert!(vector::contains(&acl.robot_admin, &ctx.sender()), EInvalidAddress);
     assert!(
         clock::timestamp_ms(clock) >= config.surge_address_config.early_backers_can_claim_timestamp 
@@ -205,6 +213,7 @@ public fun send_to_core_contributors(
     clock: &Clock,
     ctx: &mut TxContext,
 ) {
+    assert!(config.version == VERSION, EInvalidVersion);
     assert!(vector::contains(&acl.robot_admin, &ctx.sender()), EInvalidAddress);
     assert!(
         clock::timestamp_ms(clock) >= config.surge_address_config.core_contributors_can_claim_timestamp 
@@ -227,6 +236,7 @@ public fun send_to_ecosystem(
     clock: &Clock,
     ctx: &mut TxContext,
 ) {
+    assert!(config.version == VERSION, EInvalidVersion);
     assert!(vector::contains(&acl.robot_admin, &ctx.sender()), EInvalidAddress);
     assert!(
         clock::timestamp_ms(clock) >= config.surge_address_config.ecosystem_can_claim_timestamp
@@ -249,6 +259,7 @@ public fun send_to_community(
     clock: &Clock,
     ctx: &mut TxContext,
 ) {
+    assert!(config.version == VERSION, EInvalidVersion);
     assert!(vector::contains(&acl.robot_admin, &ctx.sender()), EInvalidAddress);
     assert!(
         clock::timestamp_ms(clock) >= config.surge_address_config.community_can_claim_timestamp
@@ -271,6 +282,7 @@ public fun send_liquidity_and_listing_coin(
     clock: &Clock,
     ctx: &mut TxContext,
 ): Coin<SURGE> {
+    assert!(config.version == VERSION, EInvalidVersion);
     assert!(
         clock::timestamp_ms(clock) >= config.vesting_config.tge_timestamp && config.vesting_config.tge_timestamp != 0,
         EInvalidTgeTimestamp,
@@ -291,22 +303,20 @@ public fun send_liquidity_and_listing(
     clock: &Clock,
     ctx: &mut TxContext,
 ) {
+    assert!(config.version == VERSION, EInvalidVersion);
     let coin = coin::mint(&mut config.treasury_cap, LIQUIDITY_AND_LISTING, ctx);
     transfer::public_transfer(coin, recipient);
 }
+
 
 public fun set_whitelist_admin_list(
     config: &mut ACL,
     state: &mut SurgeVestingState,
     whitelist_address: vector<address>,
     value: vector<u64>,
-    clock: &Clock,
     ctx: &mut TxContext,
 ) {
-    assert!(
-        clock::timestamp_ms(clock) <= state.vesting_config.tge_timestamp,
-        EInvalidTgeTimestamp,
-    );
+    assert!(state.version == VERSION, EInvalidVersion);
     assert!(vector::contains(&config.set_whitelist_admin, &ctx.sender()), EInvalidAddress);
     assert!(
         vector::length(&whitelist_address) == vector::length(&value),
@@ -339,6 +349,7 @@ public fun remove_whitelist_admin_list(
     whitelist_address: vector<address>,
     ctx: &mut TxContext,
 ) {
+    assert!(state.version == VERSION, EInvalidVersion);
     assert!(whitelist_address.length() <= MAX_LENGTH, EInvalidLength);
     assert!(vector::contains(&config.set_whitelist_admin, &ctx.sender()), EInvalidAddress);
     let mut i = 0;
@@ -356,7 +367,9 @@ public fun set_tge_timestamp(
     tge_timestamp: u64,
     vesting_timestamp: u64,
 ) {
+    assert!(config.version == VERSION, EInvalidVersion);
     assert!(config.vesting_config.tge_timestamp == 0, EAlreadySetTgeTimestamp);
+    assert!(vesting_timestamp > tge_timestamp, EInvalidTime);
     config.vesting_config.tge_timestamp = tge_timestamp;
     config.surge_address_config.early_backers_can_claim_timestamp =
         vesting_timestamp + YEAR_TIME_MS;
@@ -385,6 +398,7 @@ public fun set_early_backers_address(
     config: &mut SurgeVestingState,
     addr: address,
 ) {
+    assert!(config.version == VERSION, EInvalidVersion);
     config.surge_address_config.early_backers = addr;
 }
 
@@ -393,14 +407,17 @@ public fun set_core_contributors_address(
     config: &mut SurgeVestingState,
     addr: address,
 ) {
+    assert!(config.version == VERSION, EInvalidVersion);
     config.surge_address_config.core_contributors = addr;
 }
 
 public fun set_ecosystem_address(_: &SuperAdmin, config: &mut SurgeVestingState, addr: address) {
+    assert!(config.version == VERSION, EInvalidVersion);
     config.surge_address_config.ecosystem = addr;
 }
 
 public fun set_community_address(_: &SuperAdmin, config: &mut SurgeVestingState, addr: address) {
+    assert!(config.version == VERSION, EInvalidVersion);
     config.surge_address_config.community = addr;
 }
 
@@ -414,6 +431,15 @@ public fun remove_whitelist_admin(_: &SuperAdmin, config: &mut ACL, admin: addre
     let (is_found, index) = vector::index_of(&config.set_whitelist_admin, &admin);
     assert!(is_found, EInvalidAddress);
     vector::remove(&mut config.set_whitelist_admin, index);
+}
+
+public fun migrate_version(_: &SuperAdmin, config: &mut SurgeVestingState) {
+    assert!(config.version < VERSION, EInvalidVersion);
+    event::emit(VersionUpdatedEvent {
+        old_version: config.version,
+        new_version: VERSION,
+    });
+    config.version = VERSION;
 }
 
 ///getter
