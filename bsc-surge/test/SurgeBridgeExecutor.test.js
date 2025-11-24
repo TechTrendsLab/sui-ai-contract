@@ -194,7 +194,7 @@ describe("SurgeBridgeExecutor", function () {
 
       await expect(
         bridgeExecutor.connect(user1).initiateTransfer(amount, targetAddress, targetChain, { value: badFee })
-      ).to.be.revertedWithCustomError(bridgeExecutor, "InvalidAmount"); // Logic maps < requiredFee to InvalidAmount
+      ).to.be.revertedWithCustomError(bridgeExecutor, "InsufficientFee");
     });
 
     it("Should revert if amount is 0", async function () {
@@ -326,6 +326,182 @@ describe("SurgeBridgeExecutor", function () {
 
       await expect(bridgeExecutor.completeTransfer(encodedVm))
         .to.be.revertedWithCustomError(bridgeExecutor, "InvalidPayload");
+    });
+
+    it("Should revert if payload length is too short", async function () {
+      const shortPayload = "0x01"; // Too short
+      const vm = createMockVM(sourceChain, toWormholeFormat(user2.address), shortPayload);
+      const encodedVm = encodeMockVM(vm);
+
+      await expect(bridgeExecutor.completeTransfer(encodedVm))
+        .to.be.revertedWithCustomError(bridgeExecutor, "InvalidPayload");
+    });
+
+    it("Should revert if payload ID is invalid", async function () {
+      const payload = createPackedPayload(amount);
+      const buffer = Buffer.from(payload.slice(2), 'hex');
+      buffer.writeUInt8(99, 0); // Invalid payloadId at index 0
+
+      const vm = createMockVM(sourceChain, toWormholeFormat(user2.address), "0x" + buffer.toString('hex'));
+      const encodedVm = encodeMockVM(vm);
+
+      await expect(bridgeExecutor.completeTransfer(encodedVm))
+        .to.be.revertedWithCustomError(bridgeExecutor, "InvalidPayload");
+    });
+
+    it("Should revert if source chain does not match emitter chain", async function () {
+      const payload = createPackedPayload(amount);
+      // Payload has sourceChain = sourceChain (ETH)
+      
+      const wrongChain = sourceChain + 1;
+      // We need to trust the emitter on the wrongChain too, otherwise we get UnknownEmitter.
+      await bridgeExecutor.setTrustedEmitter(wrongChain, toWormholeFormat(user2.address));
+
+      const vm = createMockVM(wrongChain, toWormholeFormat(user2.address), payload);
+      
+      const encodedVm = encodeMockVM(vm);
+
+      await expect(bridgeExecutor.completeTransfer(encodedVm))
+        .to.be.revertedWithCustomError(bridgeExecutor, "InvalidPayload");
+    });
+
+    it("Should accept payload longer than 101 bytes (extra bytes ignored)", async function () {
+      const payload = createPackedPayload(amount);
+      // Append extra bytes
+      const longPayload = payload + "ffffffff"; // + 4 bytes
+      
+      const vm = createMockVM(sourceChain, toWormholeFormat(user2.address), longPayload);
+      const encodedVm = encodeMockVM(vm);
+
+      const balanceBefore = await surge.balanceOf(recipient);
+      await expect(bridgeExecutor.completeTransfer(encodedVm))
+        .to.emit(bridgeExecutor, "TransferCompleted");
+        
+      const balanceAfter = await surge.balanceOf(recipient);
+      expect(balanceAfter - balanceBefore).to.equal(amount);
+    });
+
+    it("Should revert if recipient address is invalid (dirty high bytes)", async function () {
+      // Create payload with invalid recipient (high bits set)
+      const payload = createPackedPayload(amount);
+      const buffer = Buffer.from(payload.slice(2), 'hex');
+      
+      // Recipient is at offset 1 + 32 = 33
+      // Set the first byte of recipient (high byte) to non-zero
+      buffer.writeUInt8(0xff, 33); 
+      
+      const vm = createMockVM(sourceChain, toWormholeFormat(user2.address), "0x" + buffer.toString('hex'));
+      const encodedVm = encodeMockVM(vm);
+
+      await expect(bridgeExecutor.completeTransfer(encodedVm))
+        .to.be.revertedWithCustomError(bridgeExecutor, "InvalidAddress");
+    });
+  });
+
+  describe("Edge Cases & Coverage", function () {
+    it("Should revert deployment with invalid arguments", async function () {
+      const SurgeBridgeExecutorFactory = await ethers.getContractFactory("SurgeBridgeExecutor");
+      
+      // surgeToken = address(0)
+      await expect(SurgeBridgeExecutorFactory.deploy(
+        ethers.ZeroAddress,
+        await wormhole.getAddress(),
+        WORMHOLE_CHAIN_ID_BSC,
+        CONSISTENCY_LEVEL,
+        owner.address,
+        feeRecipient.address,
+        MIN_FEE
+      )).to.be.revertedWithCustomError({ interface: bridgeExecutor.interface }, "InvalidAddress");
+
+      // wormholeCore = address(0)
+      await expect(SurgeBridgeExecutorFactory.deploy(
+        await surge.getAddress(),
+        ethers.ZeroAddress,
+        WORMHOLE_CHAIN_ID_BSC,
+        CONSISTENCY_LEVEL,
+        owner.address,
+        feeRecipient.address,
+        MIN_FEE
+      )).to.be.revertedWithCustomError({ interface: bridgeExecutor.interface }, "InvalidAddress");
+
+      // feeRecipient = address(0)
+      await expect(SurgeBridgeExecutorFactory.deploy(
+        await surge.getAddress(),
+        await wormhole.getAddress(),
+        WORMHOLE_CHAIN_ID_BSC,
+        CONSISTENCY_LEVEL,
+        owner.address,
+        ethers.ZeroAddress,
+        MIN_FEE
+      )).to.be.revertedWithCustomError({ interface: bridgeExecutor.interface }, "InvalidAddress");
+    });
+
+    it("Should revert setTrustedEmitter with invalid arguments", async function () {
+      await expect(bridgeExecutor.setTrustedEmitter(0, toWormholeFormat(user1.address)))
+        .to.be.revertedWithCustomError(bridgeExecutor, "InvalidAddress");
+        
+      await expect(bridgeExecutor.setTrustedEmitter(10, ethers.ZeroHash))
+        .to.be.revertedWithCustomError(bridgeExecutor, "InvalidAddress");
+    });
+
+    it("Should revert updateFeeConfig with invalid recipient", async function () {
+      await expect(bridgeExecutor.updateFeeConfig(ethers.ZeroAddress, 100))
+        .to.be.revertedWithCustomError(bridgeExecutor, "InvalidAddress");
+    });
+
+    it("Should revert rescueNative with invalid address", async function () {
+      await expect(bridgeExecutor.rescueNative(ethers.ZeroAddress, 100))
+        .to.be.revertedWithCustomError(bridgeExecutor, "InvalidAddress");
+    });
+
+    it("Should revert rescueERC20 with invalid arguments", async function () {
+      await expect(bridgeExecutor.rescueERC20(ethers.ZeroAddress, owner.address, 100))
+        .to.be.revertedWithCustomError(bridgeExecutor, "InvalidAddress");
+
+      await expect(bridgeExecutor.rescueERC20(await surge.getAddress(), ethers.ZeroAddress, 100))
+        .to.be.revertedWithCustomError(bridgeExecutor, "InvalidAddress");
+    });
+    
+    it("Should fail if fee transfer fails (Recipient rejects ETH)", async function () {
+        // Deploy a contract that rejects ETH receive
+        const RejectorFactory = await ethers.getContractFactory("MockWormhole"); // MockWormhole doesn't have receive(), so it rejects
+        const rejector = await RejectorFactory.deploy();
+        
+        // Update fee recipient to rejector
+        await bridgeExecutor.updateFeeConfig(await rejector.getAddress(), MIN_FEE);
+        
+        const amount = ethers.parseUnits("10", 9);
+        await surge.connect(user1).approve(await bridgeExecutor.getAddress(), amount);
+        const totalFee = (await wormhole.messageFee()) + MIN_FEE;
+
+        await expect(
+            bridgeExecutor.connect(user1).initiateTransfer(amount, ethers.zeroPadValue("0x1234", 32), WORMHOLE_CHAIN_ID_ETH, { value: totalFee })
+        ).to.be.revertedWith("fee transfer failed");
+        
+        // Restore fee recipient
+        await bridgeExecutor.updateFeeConfig(feeRecipient.address, MIN_FEE);
+    });
+
+    it("Should execute transfer without fee if minFee is 0", async function () {
+        // Set minFee to 0
+        await bridgeExecutor.updateFeeConfig(feeRecipient.address, 0);
+        
+        const amount = ethers.parseUnits("10", 9);
+        await surge.connect(user1).approve(await bridgeExecutor.getAddress(), amount);
+        const wormholeFee = await wormhole.messageFee();
+        
+        // Fee recipient balance shouldn't change (except for gas if it was the sender, but here checking recipient)
+        const feeRecipientBalanceBefore = await ethers.provider.getBalance(feeRecipient.address);
+        
+        await expect(
+            bridgeExecutor.connect(user1).initiateTransfer(amount, ethers.zeroPadValue("0x1234", 32), WORMHOLE_CHAIN_ID_ETH, { value: wormholeFee })
+        ).to.emit(bridgeExecutor, "TransferInitiated");
+        
+        const feeRecipientBalanceAfter = await ethers.provider.getBalance(feeRecipient.address);
+        expect(feeRecipientBalanceAfter).to.equal(feeRecipientBalanceBefore);
+        
+        // Reset minFee
+        await bridgeExecutor.updateFeeConfig(feeRecipient.address, MIN_FEE);
     });
   });
   
