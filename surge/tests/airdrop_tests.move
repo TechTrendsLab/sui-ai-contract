@@ -21,7 +21,8 @@ const AIRDROP_AMOUNT_USER1: u64 = 1_000_000_000_000; // 1M SURGE
 const AIRDROP_AMOUNT_USER2: u64 = 2_000_000_000_000; // 2M SURGE
 const AIRDROP_AMOUNT_USER3: u64 = 3_000_000_000_000; // 3M SURGE
 const MAX_AIRDROP: u64 = 80_000_000_000_000; // 80M SURGE
-const TGE_TIMESTAMP: u64 = 1000000000000; 
+const TGE_TIMESTAMP: u64 = 1000000000000;
+const VESTING_TIMESTAMP: u64 = 1000000001000; // vesting_timestamp must be > tge_timestamp 
 
 fun create_clock_at_time(time: u64, ctx: &mut TxContext): Clock {
     let mut clock = clock::create_for_testing(ctx);
@@ -71,7 +72,7 @@ fun setup_test_env(scenario: &mut ts::Scenario) {
         let super_admin = ts::take_from_sender<SuperAdmin>(scenario);
         let mut vesting_state = ts::take_shared<SurgeVestingState>(scenario);
         
-        vesting::set_tge_timestamp(&super_admin, &mut vesting_state, TGE_TIMESTAMP, TGE_TIMESTAMP);
+        vesting::set_tge_timestamp(&super_admin, &mut vesting_state, TGE_TIMESTAMP, VESTING_TIMESTAMP);
         
         ts::return_shared(vesting_state);
         ts::return_to_sender(scenario, super_admin);
@@ -113,7 +114,6 @@ fun test_set_whitelist() {
     {
         let mut acl = ts::take_shared<ACL>(scenario);
         let mut vesting_state = ts::take_shared<SurgeVestingState>(scenario);
-        let clock = create_clock_at_time(TGE_TIMESTAMP - 1000, ts::ctx(scenario));
         let addresses = vector[USER1, USER2];
         let amounts = vector[AIRDROP_AMOUNT_USER1, AIRDROP_AMOUNT_USER2];
         
@@ -122,13 +122,11 @@ fun test_set_whitelist() {
             &mut vesting_state,
             addresses,
             amounts,
-            &clock,
             ts::ctx(scenario),
         );
         
         ts::return_shared(acl);
         ts::return_shared(vesting_state);
-        clock::destroy_for_testing(clock);
     };
 
     ts::end(scenario_val);
@@ -151,7 +149,6 @@ fun test_claim_airdrop_success() {
             &mut vesting_state,
             vector[USER1],
             vector[AIRDROP_AMOUNT_USER1],
-            &clock,
             ts::ctx(scenario),
         );
         
@@ -198,7 +195,6 @@ fun test_multiple_users_claim_airdrop() {
             &mut vesting_state,
             vector[USER1, USER2, USER3],
             vector[AIRDROP_AMOUNT_USER1, AIRDROP_AMOUNT_USER2, AIRDROP_AMOUNT_USER3],
-            &clock,
             ts::ctx(scenario),
         );
         
@@ -282,7 +278,6 @@ fun test_claim_before_tge_fails() {
             &mut vesting_state,
             vector[USER1],
             vector[AIRDROP_AMOUNT_USER1],
-            &clock,
             ts::ctx(scenario),
         );
         
@@ -317,19 +312,16 @@ fun test_non_whitelist_user_claim_fails() {
     {
         let mut acl = ts::take_shared<ACL>(scenario);
         let mut vesting_state = ts::take_shared<SurgeVestingState>(scenario);
-        let clock = create_clock_at_time(TGE_TIMESTAMP - 1000, ts::ctx(scenario));
         vesting::set_whitelist_admin_list(
             &mut acl,
             &mut vesting_state,
             vector[USER1],
-            vector[AIRDROP_AMOUNT_USER1],
-            &clock,
+            vector[AIRDROP_AMOUNT_USER1],   
             ts::ctx(scenario),
         );
         
         ts::return_shared(acl);
         ts::return_shared(vesting_state);
-        clock::destroy_for_testing(clock);
     };
 
     ts::next_tx(scenario, USER2);
@@ -382,7 +374,6 @@ fun test_double_claim_fails() {
             &mut vesting_state,
             vector[USER1],
             vector[AIRDROP_AMOUNT_USER1],
-            &clock,
             ts::ctx(scenario),
         );
         
@@ -433,7 +424,6 @@ fun test_update_whitelist_amount() {
             &mut vesting_state,
             vector[USER1],
             vector[AIRDROP_AMOUNT_USER1],
-            &clock,
             ts::ctx(scenario),
         );
         
@@ -453,7 +443,6 @@ fun test_update_whitelist_amount() {
             &mut vesting_state,
             vector[USER1],
             vector[new_amount],
-            &clock,
             ts::ctx(scenario),
         );
         
@@ -476,7 +465,7 @@ fun test_update_whitelist_amount() {
     ts::next_tx(scenario, USER1);
     {
         let coin = ts::take_from_sender<Coin<SURGE>>(scenario);
-        assert_eq!(coin::value(&coin), new_amount);
+        assert_eq!(coin::value(&coin), new_amount + AIRDROP_AMOUNT_USER1);
         ts::return_to_sender(scenario, coin);
     };
 
@@ -500,7 +489,6 @@ fun test_remove_whitelist() {
             &mut vesting_state,
             vector[USER1, USER2],
             vector[AIRDROP_AMOUNT_USER1, AIRDROP_AMOUNT_USER2],
-            &clock,
             ts::ctx(scenario),
         );
         
@@ -563,7 +551,6 @@ fun test_exceed_max_airdrop_fails() {
             &mut vesting_state,
             vector[USER1],
             vector[MAX_AIRDROP + 1],
-            &clock,
             ts::ctx(scenario),
         );
         
@@ -604,7 +591,6 @@ fun test_batch_set_whitelist_max_length() {
             &mut vesting_state,
             addresses,
             amounts,
-            &clock,
             ts::ctx(scenario),
         );
         
@@ -644,7 +630,6 @@ fun test_batch_set_whitelist_exceed_max_length_fails() {
             &mut vesting_state,
             addresses,
             amounts,
-            &clock,
             ts::ctx(scenario),
         );
         
@@ -674,7 +659,6 @@ fun test_address_amount_length_mismatch_fails() {
             &mut vesting_state,
             vector[USER1, USER2, USER3],
             vector[AIRDROP_AMOUNT_USER1, AIRDROP_AMOUNT_USER2],
-            &clock,
             ts::ctx(scenario),
         );
         
@@ -706,7 +690,6 @@ fun test_non_whitelist_admin_set_fails() {
             &mut vesting_state,
             vector[USER2],
             vector[AIRDROP_AMOUNT_USER2],
-            &clock,
             ts::ctx(scenario),
         );
         
@@ -733,7 +716,7 @@ fun test_duplicate_set_tge_timestamp_fails() {
         let super_admin = ts::take_from_sender<SuperAdmin>(scenario);
         let mut vesting_state = ts::take_shared<SurgeVestingState>(scenario);
         
-        vesting::set_tge_timestamp(&super_admin, &mut vesting_state, TGE_TIMESTAMP + 1000, TGE_TIMESTAMP + 1000);
+        vesting::set_tge_timestamp(&super_admin, &mut vesting_state, TGE_TIMESTAMP + 1000, TGE_TIMESTAMP + 2000);
         
         ts::return_shared(vesting_state);
         ts::return_to_sender(scenario, super_admin);
@@ -823,7 +806,6 @@ fun test_airdrop_amount_accumulation() {
             &mut vesting_state,
             vector[USER1],
             vector[10_000_000_000_000], // 10M
-            &clock,
             ts::ctx(scenario),
         );
         
@@ -843,7 +825,6 @@ fun test_airdrop_amount_accumulation() {
             &mut vesting_state,
             vector[USER2],
             vector[20_000_000_000_000], // 20M
-            &clock,
             ts::ctx(scenario),
         );
         
@@ -862,8 +843,7 @@ fun test_airdrop_amount_accumulation() {
             &mut acl,
             &mut vesting_state,
             vector[USER3],
-            vector[50_000_000_000_000], // 50M, 总计80M
-            &clock,
+            vector[50_000_000_000_000], // 50M, 总计80M 
             ts::ctx(scenario),
         );
         
@@ -911,9 +891,19 @@ fun test_send_to_early_backers() {
 
     setup_test_env(scenario);
 
-    // 早期支持者可以在 TGE + 1年后领取
-    // TGE_TIMESTAMP + YEAR_TIME_MS
-    let claim_time = TGE_TIMESTAMP + 31556926000 + 1000; // TGE + 1年 + 1秒
+    // 设置早期支持者地址
+    ts::next_tx(scenario, ADMIN);
+    {
+        let super_admin = ts::take_from_sender<SuperAdmin>(scenario);
+        let mut vesting_state = ts::take_shared<SurgeVestingState>(scenario);
+        vesting::set_early_backers_address(&super_admin, &mut vesting_state, @0x1);
+        ts::return_shared(vesting_state);
+        ts::return_to_sender(scenario, super_admin);
+    };
+
+    // 早期支持者可以在 vesting_timestamp + 1年后领取
+    // VESTING_TIMESTAMP + YEAR_TIME_MS
+    let claim_time = VESTING_TIMESTAMP + 31556926000 + 1000; // vesting + 1年 + 1秒
 
     // ROBOT_ADMIN 发送给早期支持者
     ts::next_tx(scenario, ROBOT_ADMIN);
@@ -949,8 +939,8 @@ fun test_send_to_early_backers_before_time_fails() {
 
     setup_test_env(scenario);
 
-    // 尝试在 TGE + 1年之前发送（应该失败）
-    let claim_time = TGE_TIMESTAMP + 31556926000 - 1000; // TGE + 1年 - 1秒
+    // 尝试在 vesting_timestamp + 1年之前发送（应该失败）
+    let claim_time = VESTING_TIMESTAMP + 31556926000 - 1000; // vesting + 1年 - 1秒
 
     ts::next_tx(scenario, ROBOT_ADMIN);
     {
@@ -977,7 +967,7 @@ fun test_send_to_early_backers_non_robot_admin_fails() {
 
     setup_test_env(scenario);
 
-    let claim_time = TGE_TIMESTAMP + 31556926000 + 1000;
+    let claim_time = VESTING_TIMESTAMP + 31556926000 + 1000;
 
     // USER1（非机器人管理员）尝试发送（应该失败）
     ts::next_tx(scenario, USER1);
@@ -1004,8 +994,18 @@ fun test_send_to_core_contributors() {
 
     setup_test_env(scenario);
 
-    // 核心贡献者可以在 TGE + 1年后领取
-    let claim_time = TGE_TIMESTAMP + 31556926000 + 1000;
+    // 设置核心贡献者地址
+    ts::next_tx(scenario, ADMIN);
+    {
+        let super_admin = ts::take_from_sender<SuperAdmin>(scenario);
+        let mut vesting_state = ts::take_shared<SurgeVestingState>(scenario);
+        vesting::set_core_contributors_address(&super_admin, &mut vesting_state, @0x2);
+        ts::return_shared(vesting_state);
+        ts::return_to_sender(scenario, super_admin);
+    };
+
+    // 核心贡献者可以在 vesting_timestamp + 1年后领取
+    let claim_time = VESTING_TIMESTAMP + 31556926000 + 1000;
 
     ts::next_tx(scenario, ROBOT_ADMIN);
     {
@@ -1039,7 +1039,17 @@ fun test_send_to_ecosystem() {
 
     setup_test_env(scenario);
 
-    let claim_time = TGE_TIMESTAMP + 1000;
+    // 设置生态系统地址
+    ts::next_tx(scenario, ADMIN);
+    {
+        let super_admin = ts::take_from_sender<SuperAdmin>(scenario);
+        let mut vesting_state = ts::take_shared<SurgeVestingState>(scenario);
+        vesting::set_ecosystem_address(&super_admin, &mut vesting_state, @0x3);
+        ts::return_shared(vesting_state);
+        ts::return_to_sender(scenario, super_admin);
+    };
+
+    let claim_time = VESTING_TIMESTAMP + 1000;
 
     ts::next_tx(scenario, ROBOT_ADMIN);
     {
@@ -1071,7 +1081,17 @@ fun test_send_to_community() {
 
     setup_test_env(scenario);
 
-    let claim_time = TGE_TIMESTAMP + 1000;
+    // 设置社区地址
+    ts::next_tx(scenario, ADMIN);
+    {
+        let super_admin = ts::take_from_sender<SuperAdmin>(scenario);
+        let mut vesting_state = ts::take_shared<SurgeVestingState>(scenario);
+        vesting::set_community_address(&super_admin, &mut vesting_state, @0x4);
+        ts::return_shared(vesting_state);
+        ts::return_to_sender(scenario, super_admin);
+    };
+
+    let claim_time = VESTING_TIMESTAMP + 1000;
 
     ts::next_tx(scenario, ROBOT_ADMIN);
     {
@@ -1103,7 +1123,17 @@ fun test_send_to_early_backers_monthly() {
 
     setup_test_env(scenario);
 
-    let first_claim_time = TGE_TIMESTAMP + 31556926000 + 1000;
+    // 设置早期支持者地址
+    ts::next_tx(scenario, ADMIN);
+    {
+        let super_admin = ts::take_from_sender<SuperAdmin>(scenario);
+        let mut vesting_state = ts::take_shared<SurgeVestingState>(scenario);
+        vesting::set_early_backers_address(&super_admin, &mut vesting_state, @0x1);
+        ts::return_shared(vesting_state);
+        ts::return_to_sender(scenario, super_admin);
+    };
+
+    let first_claim_time = VESTING_TIMESTAMP + 31556926000 + 1000;
     ts::next_tx(scenario, ROBOT_ADMIN);
     {
         let acl = ts::take_shared<ACL>(scenario);
@@ -1183,7 +1213,6 @@ fun test_get_airdrop_amount() {
             &mut vesting_state,
             vector[USER1, USER2],
             vector[AIRDROP_AMOUNT_USER1, AIRDROP_AMOUNT_USER2],
-            &clock,
             ts::ctx(scenario),
         );
         
@@ -1371,8 +1400,8 @@ fun test_send_to_core_contributors_before_time_fails() {
 
     setup_test_env(scenario);
 
-    // 尝试在 TGE + 1年之前发送（应该失败）
-    let claim_time = TGE_TIMESTAMP + 31556926000 - 1000; // TGE + 1年 - 1秒
+    // 尝试在 vesting_timestamp + 1年之前发送（应该失败）
+    let claim_time = VESTING_TIMESTAMP + 31556926000 - 1000; // vesting + 1年 - 1秒
 
     ts::next_tx(scenario, ROBOT_ADMIN);
     {
@@ -1398,7 +1427,7 @@ fun test_send_to_core_contributors_non_robot_admin_fails() {
 
     setup_test_env(scenario);
 
-    let claim_time = TGE_TIMESTAMP + 31556926000 + 1000;
+    let claim_time = VESTING_TIMESTAMP + 31556926000 + 1000;
 
     // USER1（非机器人管理员）尝试发送（应该失败）
     ts::next_tx(scenario, USER1);
@@ -1425,8 +1454,8 @@ fun test_send_to_ecosystem_before_time_fails() {
 
     setup_test_env(scenario);
 
-    // 尝试在 TGE 之前发送（应该失败）
-    let claim_time = TGE_TIMESTAMP - 1000;
+    // 尝试在 vesting_timestamp 之前发送（应该失败）
+    let claim_time = VESTING_TIMESTAMP - 1000;
 
     ts::next_tx(scenario, ROBOT_ADMIN);
     {
@@ -1452,7 +1481,7 @@ fun test_send_to_ecosystem_non_robot_admin_fails() {
 
     setup_test_env(scenario);
 
-    let claim_time = TGE_TIMESTAMP + 1000;
+    let claim_time = VESTING_TIMESTAMP + 1000;
 
     // USER1（非机器人管理员）尝试发送（应该失败）
     ts::next_tx(scenario, USER1);
@@ -1479,8 +1508,8 @@ fun test_send_to_community_before_time_fails() {
 
     setup_test_env(scenario);
 
-    // 尝试在 TGE 之前发送（应该失败）
-    let claim_time = TGE_TIMESTAMP - 1000;
+    // 尝试在 vesting_timestamp 之前发送（应该失败）
+    let claim_time = VESTING_TIMESTAMP - 1000;
 
     ts::next_tx(scenario, ROBOT_ADMIN);
     {
@@ -1506,7 +1535,7 @@ fun test_send_to_community_non_robot_admin_fails() {
 
     setup_test_env(scenario);
 
-    let claim_time = TGE_TIMESTAMP + 1000;
+    let claim_time = VESTING_TIMESTAMP + 1000;
 
     // USER1（非机器人管理员）尝试发送（应该失败）
     ts::next_tx(scenario, USER1);

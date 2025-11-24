@@ -169,7 +169,12 @@ public fun claim_airdrop_coin(
     assert!(table::contains(&config.airdrop_table, ctx.sender()), EInvalidAddress);
     let airdrop_amount = *table::borrow(&config.airdrop_table, ctx.sender());
     table::remove(&mut config.airdrop_table, ctx.sender());
-    table::add(&mut config.claimed_airdrop_table, ctx.sender(), airdrop_amount);
+    if(table::contains(&config.claimed_airdrop_table, ctx.sender())) {
+        let claimed_airdrop_amount = *table::borrow(&config.claimed_airdrop_table, ctx.sender());
+        *table::borrow_mut(&mut config.claimed_airdrop_table, ctx.sender()) = claimed_airdrop_amount + airdrop_amount;
+    }else{
+        table::add(&mut config.claimed_airdrop_table, ctx.sender(), airdrop_amount);
+    };
     let coin = coin::mint(&mut config.treasury_cap, airdrop_amount, ctx);
     event::emit(AirdropClaimedEvent {
         address: ctx.sender(),
@@ -179,7 +184,6 @@ public fun claim_airdrop_coin(
 }
 
 public fun claim_airdrop(config: &mut SurgeVestingState, clock: &Clock, ctx: &mut TxContext) {
-    assert!(config.version == VERSION, EInvalidVersion);
     let coin = claim_airdrop_coin(config, clock, ctx);
     transfer::public_transfer(coin, ctx.sender());
 }
@@ -297,15 +301,14 @@ public fun send_liquidity_and_listing_coin(
 }
 
 public fun send_liquidity_and_listing(
-    _: &SuperAdmin,
+    admin: &SuperAdmin,
     recipient: address,
     config: &mut SurgeVestingState,
     clock: &Clock,
     ctx: &mut TxContext,
 ) {
-    assert!(config.version == VERSION, EInvalidVersion);
-    let coin = coin::mint(&mut config.treasury_cap, LIQUIDITY_AND_LISTING, ctx);
-    transfer::public_transfer(coin, recipient);
+  let coin = send_liquidity_and_listing_coin(admin, config, clock, ctx);
+  transfer::public_transfer(coin, recipient);
 }
 
 
@@ -327,8 +330,8 @@ public fun set_whitelist_admin_list(
     while (i < whitelist_address.length()) {
         if (table::contains(&state.airdrop_table, whitelist_address[i])) {
             state.current_airdrop_amount =
-                state.current_airdrop_amount + value[i] - *table::borrow(&state.airdrop_table, whitelist_address[i]);
-            *table::borrow_mut(&mut state.airdrop_table, whitelist_address[i]) = value[i];
+                state.current_airdrop_amount + value[i];
+            *table::borrow_mut(&mut state.airdrop_table, whitelist_address[i]) = value[i] + *table::borrow(&state.airdrop_table, whitelist_address[i]);
         } else {
             table::add(&mut state.airdrop_table, whitelist_address[i], value[i]);
             state.current_airdrop_amount = state.current_airdrop_amount + value[i];
