@@ -21,15 +21,10 @@ contract Surge is ERC20, Ownable {
     }
 
     constructor(address initialOwner) ERC20("SurgeAI", "SGE") Ownable(initialOwner) {
-        //_mint(initialOwner, 1_000_000_000_000);
     }
 
-    /**
-     * @dev 重写 decimals 函数以修改小数位数
-     * 默认是 18。如果你想改为 6 位（像 USDC），这里返回 6 即可。
-     */
     function decimals() public view virtual override returns (uint8) {
-        return 9; // 修改这个数字
+        return 9;
     }
 
     function bridgeMint(address to, uint256 amount) external onlySurgeBridgeExecutor {
