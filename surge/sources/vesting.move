@@ -11,12 +11,16 @@ const VERSION: u64 = 0;
 const MAX_LENGTH: u64 = 500;
 const MONTH_TIME_MS: u64 = 2629746000;
 const YEAR_TIME_MS: u64 = 31556926000;
-const ECOSYSTEM_AIRDROP_MONTH: u64 = 4_166_666_666_666;
-const COMMUNITY_AIRDROP_MONTH: u64 = 6_527_777_777_777;
-const EARLY_BACKERS_AIRDROP_MONTH: u64 = 2_777_777_777_777;
-const CORE_CONTRIBUTORS_AIRDROP_MONTH: u64 = 2_777_777_777_777;
-const LIQUIDITY_AND_LISTING: u64 = 50_000_000_000_000;
-const AIRDROP: u64 = 80_000_000_000_000;
+const TOTAL_ECOSYSTEM_AIRDROP: u64 = 200_000_000_000_000_000;
+const TOTAL_COMMUNITY_AIRDROP: u64 = 470_000_000_000_000_000;
+const TOTAL_EARLY_BACKERS_AIRDROP: u64 = 100_000_000_000_000_000;
+const TOTAL_CORE_CONTRIBUTORS_AIRDROP: u64 = 100_000_000_000_000_000;
+const ECOSYSTEM_AIRDROP_MONTH: u64 = 4_166_666_666_666_666;
+const COMMUNITY_AIRDROP_MONTH: u64 = 6_527_777_777_777_777;
+const EARLY_BACKERS_AIRDROP_MONTH: u64 = 2_777_777_777_777_777;
+const CORE_CONTRIBUTORS_AIRDROP_MONTH: u64 = 2_777_777_777_777_777;
+const LIQUIDITY_AND_LISTING: u64 = 50_000_000_000_000_000;
+const AIRDROP: u64 = 80_000_000_000_000_000;
 
 const EInvalidState: u64 = 0;
 const EInvalidAddress: u64 = 1;
@@ -50,12 +54,19 @@ public struct SurgeVestingState has key {
 public struct SurgeAddressConfig has store {
     //address,can_claim_timestamp
     early_backers: address,
+    total_early_backers_airdrop: u64,
     early_backers_can_claim_timestamp: u64,
+
+    total_core_contributors_airdrop: u64,
     core_contributors: address,
     core_contributors_can_claim_timestamp: u64,
+
     ecosystem: address,
+    total_ecosystem_airdrop: u64,
     ecosystem_can_claim_timestamp: u64,
+
     community: address,
+    total_community_airdrop: u64,
     community_can_claim_timestamp: u64,
 }
 
@@ -141,6 +152,10 @@ public fun initialize_surge_vest_state(
             core_contributors: @0x0,
             ecosystem: @0x0,
             community: @0x0,
+            total_early_backers_airdrop: 0,
+            total_core_contributors_airdrop: 0,
+            total_ecosystem_airdrop: 0,
+            total_community_airdrop: 0,
             early_backers_can_claim_timestamp: 0,
             core_contributors_can_claim_timestamp: 0,
             ecosystem_can_claim_timestamp: 0,
@@ -201,6 +216,8 @@ public fun send_to_early_backers(
         && config.surge_address_config.early_backers_can_claim_timestamp != 0,
         EInvalidTime,
     );
+    config.surge_address_config.total_early_backers_airdrop = config.surge_address_config.total_early_backers_airdrop + EARLY_BACKERS_AIRDROP_MONTH;
+    assert!(config.surge_address_config.total_early_backers_airdrop <= TOTAL_EARLY_BACKERS_AIRDROP, EOverAirdropAmount);
     let coin = coin::mint(&mut config.treasury_cap, EARLY_BACKERS_AIRDROP_MONTH, ctx);
     transfer::public_transfer(coin, config.surge_address_config.early_backers);
     config.surge_address_config.early_backers_can_claim_timestamp =
@@ -224,6 +241,8 @@ public fun send_to_core_contributors(
         && config.surge_address_config.core_contributors_can_claim_timestamp != 0,
         EInvalidTime,
     );
+    config.surge_address_config.total_core_contributors_airdrop = config.surge_address_config.total_core_contributors_airdrop + CORE_CONTRIBUTORS_AIRDROP_MONTH;
+    assert!(config.surge_address_config.total_core_contributors_airdrop <= TOTAL_CORE_CONTRIBUTORS_AIRDROP, EOverAirdropAmount);
     let coin = coin::mint(&mut config.treasury_cap, CORE_CONTRIBUTORS_AIRDROP_MONTH, ctx);
     transfer::public_transfer(coin, config.surge_address_config.core_contributors);
     config.surge_address_config.core_contributors_can_claim_timestamp =
@@ -247,6 +266,8 @@ public fun send_to_ecosystem(
         && config.surge_address_config.ecosystem_can_claim_timestamp != 0,
         EInvalidTime,
     );
+    config.surge_address_config.total_ecosystem_airdrop = config.surge_address_config.total_ecosystem_airdrop + ECOSYSTEM_AIRDROP_MONTH;
+    assert!(config.surge_address_config.total_ecosystem_airdrop <= TOTAL_ECOSYSTEM_AIRDROP, EOverAirdropAmount);
     let coin = coin::mint(&mut config.treasury_cap, ECOSYSTEM_AIRDROP_MONTH, ctx);
     transfer::public_transfer(coin, config.surge_address_config.ecosystem);
     config.surge_address_config.ecosystem_can_claim_timestamp =
@@ -270,6 +291,8 @@ public fun send_to_community(
         && config.surge_address_config.community_can_claim_timestamp != 0,
         EInvalidTime,
     );
+    config.surge_address_config.total_community_airdrop = config.surge_address_config.total_community_airdrop + COMMUNITY_AIRDROP_MONTH;
+    assert!(config.surge_address_config.total_community_airdrop <= TOTAL_COMMUNITY_AIRDROP, EOverAirdropAmount);
     let coin = coin::mint(&mut config.treasury_cap, COMMUNITY_AIRDROP_MONTH, ctx);
     transfer::public_transfer(coin, config.surge_address_config.community);
     config.surge_address_config.community_can_claim_timestamp =

@@ -17,10 +17,10 @@ const USER1: address = @0x4;
 const USER2: address = @0x5;
 const USER3: address = @0x6;
 
-const AIRDROP_AMOUNT_USER1: u64 = 1_000_000_000_000; // 1M SURGE
-const AIRDROP_AMOUNT_USER2: u64 = 2_000_000_000_000; // 2M SURGE
-const AIRDROP_AMOUNT_USER3: u64 = 3_000_000_000_000; // 3M SURGE
-const MAX_AIRDROP: u64 = 80_000_000_000_000; // 80M SURGE
+const AIRDROP_AMOUNT_USER1: u64 = 1_000_000_000_000_000; // 1M SURGE
+const AIRDROP_AMOUNT_USER2: u64 = 2_000_000_000_000_000; // 2M SURGE
+const AIRDROP_AMOUNT_USER3: u64 = 3_000_000_000_000_000; // 3M SURGE
+const MAX_AIRDROP: u64 = 80_000_000_000_000_000; // 80M SURGE
 const TGE_TIMESTAMP: u64 = 1000000000000;
 const VESTING_TIMESTAMP: u64 = 1000000001000; // vesting_timestamp must be > tge_timestamp 
 
@@ -923,7 +923,7 @@ fun test_send_to_early_backers() {
     ts::next_tx(scenario, @0x1); // EARLY_BACKERS_ADDRESS
     {
         let coin = ts::take_from_sender<Coin<SURGE>>(scenario);
-        assert_eq!(coin::value(&coin), 2_777_777_777_777); // EARLY_BACKERS_AIRDROP_MONTH
+        assert_eq!(coin::value(&coin), 2_777_777_777_777_777); // EARLY_BACKERS_AIRDROP_MONTH
         ts::return_to_sender(scenario, coin);
     };
 
@@ -1024,7 +1024,7 @@ fun test_send_to_core_contributors() {
     ts::next_tx(scenario, @0x2); // CORE_CONTRIBUTORS_ADDRESS
     {
         let coin = ts::take_from_sender<Coin<SURGE>>(scenario);
-        assert_eq!(coin::value(&coin), 2_777_777_777_777); // CORE_CONTRIBUTORS_AIRDROP_MONTH
+        assert_eq!(coin::value(&coin), 2_777_777_777_777_777); // CORE_CONTRIBUTORS_AIRDROP_MONTH
         ts::return_to_sender(scenario, coin);
     };
 
@@ -1067,7 +1067,7 @@ fun test_send_to_ecosystem() {
     ts::next_tx(scenario, @0x3);
     {
         let coin = ts::take_from_sender<Coin<SURGE>>(scenario);
-        assert_eq!(coin::value(&coin), 4_166_666_666_666); // ECOSYSTEM_AIRDROP_MONTH
+        assert_eq!(coin::value(&coin), 4_166_666_666_666_666); // ECOSYSTEM_AIRDROP_MONTH
         ts::return_to_sender(scenario, coin);
     };
 
@@ -1109,7 +1109,7 @@ fun test_send_to_community() {
     ts::next_tx(scenario, @0x4);
     {
         let coin = ts::take_from_sender<Coin<SURGE>>(scenario);
-        assert_eq!(coin::value(&coin), 6_527_777_777_777); // COMMUNITY_AIRDROP_MONTH
+        assert_eq!(coin::value(&coin), 6_527_777_777_777_777); // COMMUNITY_AIRDROP_MONTH
         ts::return_to_sender(scenario, coin);
     };
 
@@ -1164,7 +1164,7 @@ fun test_send_to_early_backers_monthly() {
     ts::next_tx(scenario, @0x1);
     {
         let coin = ts::take_from_sender<Coin<SURGE>>(scenario);
-        assert_eq!(coin::value(&coin), 2_777_777_777_777);
+        assert_eq!(coin::value(&coin), 2_777_777_777_777_777);
         ts::return_to_sender(scenario, coin);
     };
 
@@ -1268,7 +1268,7 @@ fun test_claim_liquidity_and_listing() {
     ts::next_tx(scenario, ROBOT_ADMIN);
     {
         let coin = ts::take_from_sender<Coin<SURGE>>(scenario);
-        assert_eq!(coin::value(&coin), 50_000_000_000_000); // LIQUIDITY_AND_LISTING
+        assert_eq!(coin::value(&coin), 50_000_000_000_000_000); // LIQUIDITY_AND_LISTING
         ts::return_to_sender(scenario, coin);
     };
 
