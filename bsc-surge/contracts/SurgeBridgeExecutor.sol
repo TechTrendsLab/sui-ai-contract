@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -13,7 +13,7 @@ import "./IWormholeCore.sol";
  * @notice 此合约负责在 Surge 代币与 Wormhole 跨链桥之间执行铸销、消息发送与验证的逻辑。
  * @dev 由链上唯一管理员负责配置信任发射器与费用参数，普通用户可以发起跨链燃烧请求。
  */
-contract SurgeBridgeExecutor is Ownable {
+contract SurgeBridgeExecutor is Ownable2Step {
     using SafeERC20 for IERC20;
 
     error InvalidAmount(); // 输入的数额非法（0 或计算后为空）
