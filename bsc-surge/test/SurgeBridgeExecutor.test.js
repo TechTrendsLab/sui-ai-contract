@@ -139,6 +139,30 @@ describe("SurgeBridgeExecutor", function () {
       ).to.be.revertedWithCustomError(bridgeExecutor, "OwnableUnauthorizedAccount");
     });
 
+    it("Should allow owner to remove trusted emitter", async function () {
+      // Setup: first add one
+      await bridgeExecutor.setTrustedEmitter(11, toWormholeFormat(user1.address));
+      expect(await bridgeExecutor.trustedEmitters(11)).to.not.equal(ethers.ZeroHash);
+
+      // Remove
+      await expect(bridgeExecutor.removeTrustedEmitter(11))
+        .to.emit(bridgeExecutor, "TrustedEmitterUpdated")
+        .withArgs(11, ethers.ZeroHash);
+      
+      expect(await bridgeExecutor.trustedEmitters(11)).to.equal(ethers.ZeroHash);
+    });
+
+    it("Should not allow non-owner to remove trusted emitter", async function () {
+      await expect(
+        bridgeExecutor.connect(user1).removeTrustedEmitter(10)
+      ).to.be.revertedWithCustomError(bridgeExecutor, "OwnableUnauthorizedAccount");
+    });
+
+    it("Should revert removeTrustedEmitter with invalid chainId", async function () {
+       await expect(bridgeExecutor.removeTrustedEmitter(0))
+        .to.be.revertedWithCustomError(bridgeExecutor, "InvalidAddress");
+    });
+
     it("Should allow owner to update fee config", async function () {
       const newFee = ethers.parseEther("0.002");
       await expect(bridgeExecutor.updateFeeConfig(user2.address, newFee))
@@ -147,6 +171,18 @@ describe("SurgeBridgeExecutor", function () {
       
       expect(await bridgeExecutor.feeRecipient()).to.equal(user2.address);
       expect(await bridgeExecutor.minFee()).to.equal(newFee);
+    });
+
+    it("Should support two-step ownership transfer", async function () {
+      // 1. Owner starts transfer
+      await bridgeExecutor.transferOwnership(user1.address);
+      expect(await bridgeExecutor.owner()).to.equal(owner.address);
+      expect(await bridgeExecutor.pendingOwner()).to.equal(user1.address);
+
+      // 2. New owner accepts
+      await bridgeExecutor.connect(user1).acceptOwnership();
+      expect(await bridgeExecutor.owner()).to.equal(user1.address);
+      expect(await bridgeExecutor.pendingOwner()).to.equal(ethers.ZeroAddress);
     });
   });
 
@@ -537,6 +573,51 @@ describe("SurgeBridgeExecutor", function () {
           const balanceAfter = await surge.balanceOf(owner.address);
           
           expect(balanceAfter - balanceBefore).to.equal(amount);
+      });
+
+      it("Should rescue non-standard ERC20 tokens (no return value)", async function () {
+          const MockNoReturnTokenFactory = await ethers.getContractFactory("MockNoReturnToken");
+          const noReturnToken = await MockNoReturnTokenFactory.deploy();
+          await noReturnToken.waitForDeployment();
+          const tokenAddr = await noReturnToken.getAddress();
+
+          const amount = 1000;
+          // Mint directly to bridge executor to simulate stuck tokens
+          await noReturnToken.mint(await bridgeExecutor.getAddress(), amount);
+
+          // Rescue
+          await bridgeExecutor.rescueERC20(tokenAddr, owner.address, amount);
+
+          expect(await noReturnToken.balanceOf(owner.address)).to.equal(amount);
+      });
+
+      it("Should revert when rescuing ERC20 that returns false", async function () {
+          const MockFalseReturnTokenFactory = await ethers.getContractFactory("MockFalseReturnToken");
+          const falseToken = await MockFalseReturnTokenFactory.deploy();
+          await falseToken.waitForDeployment();
+          const tokenAddr = await falseToken.getAddress();
+
+          // Mint to bridge executor
+          await falseToken.mint(await bridgeExecutor.getAddress(), 1000);
+
+          // Expect revert with SafeERC20 error message
+          // SafeERC20FailedOperation(address token) is defined in SafeERC20.
+          // Since it's a library used by SurgeBridgeExecutor, we should check if we can catch it.
+          // However, hardhat-chai-matchers requires the error to be in the contract ABI or provided explicitly.
+          // Since SafeERC20 is internal library, its errors might not be in the main contract's ABI unless exposed.
+          // But usually they are bubbled up.
+          
+          // Let's try to match the revert data directly if custom error match fails, or simply check for revert.
+          // Or we can try to use the artifact of SafeERC20 if available, but it's a library.
+          
+          // Simplified check: just expect it to revert. The exact error might be tricky to match without the artifact linked in ABI.
+          await expect(
+              bridgeExecutor.rescueERC20(tokenAddr, owner.address, 1000)
+          ).to.be.reverted;
+          
+          // Ideally we want to check the specific error.
+          // Try "SafeERC20: ERC20 operation did not succeed" (old version) or custom error (new version).
+          // OpenZeppelin 5.x uses custom errors.
       });
   });
 

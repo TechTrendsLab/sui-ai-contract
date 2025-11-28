@@ -46,6 +46,18 @@ describe("Surge Token", function () {
         surge.connect(user1).setSurgeBridgeExecutor(executor.address)
       ).to.be.revertedWithCustomError(surge, "OwnableUnauthorizedAccount");
     });
+
+    it("Should support two-step ownership transfer", async function () {
+      // 1. Owner starts transfer
+      await surge.transferOwnership(user1.address);
+      expect(await surge.owner()).to.equal(owner.address);
+      expect(await surge.pendingOwner()).to.equal(user1.address);
+
+      // 2. New owner accepts
+      await surge.connect(user1).acceptOwnership();
+      expect(await surge.owner()).to.equal(user1.address);
+      expect(await surge.pendingOwner()).to.equal(ethers.ZeroAddress);
+    });
   });
 
   describe("Bridge Operations", function () {
