@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "./Surge.sol";
 import "./IWormholeCore.sol";
@@ -13,6 +14,8 @@ import "./IWormholeCore.sol";
  * @dev 由链上唯一管理员负责配置信任发射器与费用参数，普通用户可以发起跨链燃烧请求。
  */
 contract SurgeBridgeExecutor is Ownable {
+    using SafeERC20 for IERC20;
+
     error InvalidAmount(); // 输入的数额非法（0 或计算后为空）
     error InsufficientFee(); // 手续费不足
     error InvalidAddress(); // 地址参数为空地址
@@ -258,6 +261,14 @@ contract SurgeBridgeExecutor is Ownable {
         emit TrustedEmitterUpdated(chainId, emitter);
     }
 
+    function removeTrustedEmitter(uint16 chainId) external onlyOwner {
+        if (chainId == 0) {
+            revert InvalidAddress();
+        }
+        trustedEmitters[chainId] = bytes32(0);
+        emit TrustedEmitterUpdated(chainId, bytes32(0));
+    }
+
     /// @notice 更新跨链手续费接收者及最低费用
     function updateFeeConfig(address newRecipient, uint256 newMinFee) external onlyOwner {
         if (newRecipient == address(0)) {
@@ -282,8 +293,7 @@ contract SurgeBridgeExecutor is Ownable {
         if (token == address(0) || to == address(0)) {
             revert InvalidAddress();
         }
-        bool ok = IERC20(token).transfer(to, amount); // 提取其他 ERC20 资产，防止锁死
-        require(ok, "erc20 rescue failed");
+        IERC20(token).safeTransfer(to, amount); // 提取其他 ERC20 资产，防止锁死
     }
 
     /// @dev 将 20 字节地址转换为 Wormhole 要求的 32 字节格式
