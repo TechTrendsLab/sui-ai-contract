@@ -36,6 +36,7 @@ const PAYLOAD_ID: u8 = 1;
 const EInvalidMint: u64 = 0;
 const EInvalidAmount: u64 = 1;
 const EInvalidEmitterAddress: u64 = 2;
+const EInvalidRecipientAddress: u64 = 11;
 
 public struct SurgeBridgeState has key {
     id: UID,
@@ -62,6 +63,23 @@ public struct BridgeUnlockEvent has copy, drop {
     sender: ExternalAddress,
     recipient_address: ExternalAddress,
     amount: u256,
+}
+
+public struct EmitterAddedEvent has copy, drop {
+    emitter_chain: u16,
+    emitter_address: ExternalAddress,
+}
+
+public struct EmitterRemovedEvent has copy, drop {
+    emitter_chain: u16,
+}
+
+public struct FeeRecipientAddressSetEvent has copy, drop {
+    fee_recipient_address: address,
+}
+
+public struct FeeAmountSetEvent has copy, drop {
+    fee_coin_amount: u64,
 }
 
 public struct SuperAdmin has key, store {
@@ -186,6 +204,7 @@ public fun unlock(
     );
     assert!(balance::value(&surge_state.locked_pool) >= amount as u64, EInvalidAmount);
     let coin = coin::take(&mut surge_state.locked_pool, amount as u64, ctx);
+    assert!(external_address::to_address(recipient_address) != @0x0, EInvalidRecipientAddress);
     transfer::public_transfer(coin, external_address::to_address(recipient_address));
     event::emit(BridgeUnlockEvent {
         sender: sender,
@@ -202,6 +221,43 @@ public fun add_allowed_emitter(
 ) {
     let emitter_address = external_address::new(wormhole::bytes32::from_bytes(emitter_address));
     table::add(&mut state.allowed_emitters, emitter_chain, emitter_address);
+    event::emit(EmitterAddedEvent {
+        emitter_chain: emitter_chain,
+        emitter_address: emitter_address,
+    });
+}
+
+public fun remove_allowed_emitter(
+    _: &SuperAdmin,
+    state: &mut SurgeBridgeState,
+    emitter_chain: u16,
+) {
+    table::remove(&mut state.allowed_emitters, emitter_chain);
+    event::emit(EmitterRemovedEvent {
+        emitter_chain: emitter_chain,
+    });
+}
+
+public fun set_fee_recipient_address(
+    _: &SuperAdmin,
+    state: &mut SurgeBridgeState,
+    fee_recipient_address: address,
+) {
+    state.fee_recipient_address = fee_recipient_address;
+    event::emit(FeeRecipientAddressSetEvent {
+        fee_recipient_address: fee_recipient_address,
+    });
+}
+
+public fun set_fee_coin_amount(
+    _: &SuperAdmin,
+    state: &mut SurgeBridgeState,
+    fee_coin_amount: u64,
+) {
+    state.fee_coin_amount = fee_coin_amount;
+    event::emit(FeeAmountSetEvent {
+        fee_coin_amount: fee_coin_amount,
+    });
 }
 
 #[test_only]

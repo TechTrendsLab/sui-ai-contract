@@ -576,11 +576,12 @@ fun test_batch_set_whitelist_max_length() {
         
         let mut addresses = vector::empty<address>();
         let mut amounts = vector::empty<u64>();
-        let mut i = 0;
         
         let clock = create_clock_at_time(TGE_TIMESTAMP - 1000, ts::ctx(scenario));
         
-        while (i < 500) {
+        // Start from i=1 to avoid @0x0 address
+        let mut i = 1;
+        while (i <= 500) {
             vector::push_back(&mut addresses, address::from_u256(i as u256));
             vector::push_back(&mut amounts, 1_000_000);
             i = i + 1;
@@ -939,6 +940,16 @@ fun test_send_to_early_backers_before_time_fails() {
 
     setup_test_env(scenario);
 
+    // 设置早期支持者地址
+    ts::next_tx(scenario, ADMIN);
+    {
+        let super_admin = ts::take_from_sender<SuperAdmin>(scenario);
+        let mut vesting_state = ts::take_shared<SurgeVestingState>(scenario);
+        vesting::set_early_backers_address(&super_admin, &mut vesting_state, @0x1);
+        ts::return_shared(vesting_state);
+        ts::return_to_sender(scenario, super_admin);
+    };
+
     // 尝试在 vesting_timestamp + 1年之前发送（应该失败）
     let claim_time = VESTING_TIMESTAMP + 31556926000 - 1000; // vesting + 1年 - 1秒
 
@@ -966,6 +977,16 @@ fun test_send_to_early_backers_non_robot_admin_fails() {
     let scenario = &mut scenario_val;
 
     setup_test_env(scenario);
+
+    // 设置早期支持者地址
+    ts::next_tx(scenario, ADMIN);
+    {
+        let super_admin = ts::take_from_sender<SuperAdmin>(scenario);
+        let mut vesting_state = ts::take_shared<SurgeVestingState>(scenario);
+        vesting::set_early_backers_address(&super_admin, &mut vesting_state, @0x1);
+        ts::return_shared(vesting_state);
+        ts::return_to_sender(scenario, super_admin);
+    };
 
     let claim_time = VESTING_TIMESTAMP + 31556926000 + 1000;
 
@@ -1081,7 +1102,6 @@ fun test_send_to_community() {
 
     setup_test_env(scenario);
 
-    // 设置社区地址
     ts::next_tx(scenario, ADMIN);
     {
         let super_admin = ts::take_from_sender<SuperAdmin>(scenario);
@@ -1400,6 +1420,16 @@ fun test_send_to_core_contributors_before_time_fails() {
 
     setup_test_env(scenario);
 
+    // 设置核心贡献者地址
+    ts::next_tx(scenario, ADMIN);
+    {
+        let super_admin = ts::take_from_sender<SuperAdmin>(scenario);
+        let mut vesting_state = ts::take_shared<SurgeVestingState>(scenario);
+        vesting::set_core_contributors_address(&super_admin, &mut vesting_state, @0x2);
+        ts::return_shared(vesting_state);
+        ts::return_to_sender(scenario, super_admin);
+    };
+
     // 尝试在 vesting_timestamp + 1年之前发送（应该失败）
     let claim_time = VESTING_TIMESTAMP + 31556926000 - 1000; // vesting + 1年 - 1秒
 
@@ -1426,6 +1456,16 @@ fun test_send_to_core_contributors_non_robot_admin_fails() {
     let scenario = &mut scenario_val;
 
     setup_test_env(scenario);
+
+    // 设置核心贡献者地址
+    ts::next_tx(scenario, ADMIN);
+    {
+        let super_admin = ts::take_from_sender<SuperAdmin>(scenario);
+        let mut vesting_state = ts::take_shared<SurgeVestingState>(scenario);
+        vesting::set_core_contributors_address(&super_admin, &mut vesting_state, @0x2);
+        ts::return_shared(vesting_state);
+        ts::return_to_sender(scenario, super_admin);
+    };
 
     let claim_time = VESTING_TIMESTAMP + 31556926000 + 1000;
 
@@ -1454,7 +1494,16 @@ fun test_send_to_ecosystem_before_time_fails() {
 
     setup_test_env(scenario);
 
-    // 尝试在 vesting_timestamp 之前发送（应该失败）
+    // 设置生态系统地址
+    ts::next_tx(scenario, ADMIN);
+    {
+        let super_admin = ts::take_from_sender<SuperAdmin>(scenario);
+        let mut vesting_state = ts::take_shared<SurgeVestingState>(scenario);
+        vesting::set_ecosystem_address(&super_admin, &mut vesting_state, @0x3);
+        ts::return_shared(vesting_state);
+        ts::return_to_sender(scenario, super_admin);
+    };
+
     let claim_time = VESTING_TIMESTAMP - 1000;
 
     ts::next_tx(scenario, ROBOT_ADMIN);
@@ -1481,9 +1530,17 @@ fun test_send_to_ecosystem_non_robot_admin_fails() {
 
     setup_test_env(scenario);
 
-    let claim_time = VESTING_TIMESTAMP + 1000;
+    // 设置生态系统地址
+    ts::next_tx(scenario, ADMIN);
+    {
+        let super_admin = ts::take_from_sender<SuperAdmin>(scenario);
+        let mut vesting_state = ts::take_shared<SurgeVestingState>(scenario);
+        vesting::set_ecosystem_address(&super_admin, &mut vesting_state, @0x3);
+        ts::return_shared(vesting_state);
+        ts::return_to_sender(scenario, super_admin);
+    };
 
-    // USER1（非机器人管理员）尝试发送（应该失败）
+    let claim_time = VESTING_TIMESTAMP + 1000;
     ts::next_tx(scenario, USER1);
     {
         let acl = ts::take_shared<ACL>(scenario);
@@ -1507,6 +1564,15 @@ fun test_send_to_community_before_time_fails() {
     let scenario = &mut scenario_val;
 
     setup_test_env(scenario);
+
+    ts::next_tx(scenario, ADMIN);
+    {
+        let super_admin = ts::take_from_sender<SuperAdmin>(scenario);
+        let mut vesting_state = ts::take_shared<SurgeVestingState>(scenario);
+        vesting::set_community_address(&super_admin, &mut vesting_state, @0x4);
+        ts::return_shared(vesting_state);
+        ts::return_to_sender(scenario, super_admin);
+    };
 
     // 尝试在 vesting_timestamp 之前发送（应该失败）
     let claim_time = VESTING_TIMESTAMP - 1000;
@@ -1534,6 +1600,15 @@ fun test_send_to_community_non_robot_admin_fails() {
     let scenario = &mut scenario_val;
 
     setup_test_env(scenario);
+
+    ts::next_tx(scenario, ADMIN);
+    {
+        let super_admin = ts::take_from_sender<SuperAdmin>(scenario);
+        let mut vesting_state = ts::take_shared<SurgeVestingState>(scenario);
+        vesting::set_community_address(&super_admin, &mut vesting_state, @0x4);
+        ts::return_shared(vesting_state);
+        ts::return_to_sender(scenario, super_admin);
+    };
 
     let claim_time = VESTING_TIMESTAMP + 1000;
 
