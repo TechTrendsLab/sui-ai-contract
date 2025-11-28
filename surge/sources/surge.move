@@ -36,6 +36,7 @@ const PAYLOAD_ID: u8 = 1;
 const EInvalidMint: u64 = 0;
 const EInvalidAmount: u64 = 1;
 const EInvalidEmitterAddress: u64 = 2;
+const EInvalidRecipientAddress: u64 = 11;
 
 public struct SurgeBridgeState has key {
     id: UID,
@@ -203,6 +204,7 @@ public fun unlock(
     );
     assert!(balance::value(&surge_state.locked_pool) >= amount as u64, EInvalidAmount);
     let coin = coin::take(&mut surge_state.locked_pool, amount as u64, ctx);
+    assert!(external_address::to_address(recipient_address) != @0x0, EInvalidRecipientAddress);
     transfer::public_transfer(coin, external_address::to_address(recipient_address));
     event::emit(BridgeUnlockEvent {
         sender: sender,
