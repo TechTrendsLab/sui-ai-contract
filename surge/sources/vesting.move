@@ -116,6 +116,10 @@ public struct WhitelistAdminSetEvent has copy, drop {
     amount_list: vector<u64>,
 }
 
+public struct WhitelistAdminRemovedEvent has copy, drop {
+    admin_list: vector<address>,
+}
+
 public struct VersionUpdatedEvent has copy, drop {
     old_version: u64,
     new_version: u64,
@@ -393,6 +397,9 @@ public fun remove_whitelist_admin_list(
         table::remove(&mut state.airdrop_table, whitelist_address[i]);
         i = i + 1;
     };
+    event::emit(WhitelistAdminRemovedEvent {
+        admin_list: whitelist_address,
+    });
 }
 
 public fun set_tge_timestamp(

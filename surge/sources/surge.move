@@ -64,6 +64,23 @@ public struct BridgeUnlockEvent has copy, drop {
     amount: u256,
 }
 
+public struct EmitterAddedEvent has copy, drop {
+    emitter_chain: u16,
+    emitter_address: ExternalAddress,
+}
+
+public struct EmitterRemovedEvent has copy, drop {
+    emitter_chain: u16,
+}
+
+public struct FeeRecipientAddressSetEvent has copy, drop {
+    fee_recipient_address: address,
+}
+
+public struct FeeAmountSetEvent has copy, drop {
+    fee_coin_amount: u64,
+}
+
 public struct SuperAdmin has key, store {
     id: UID,
 }
@@ -202,6 +219,10 @@ public fun add_allowed_emitter(
 ) {
     let emitter_address = external_address::new(wormhole::bytes32::from_bytes(emitter_address));
     table::add(&mut state.allowed_emitters, emitter_chain, emitter_address);
+    event::emit(EmitterAddedEvent {
+        emitter_chain: emitter_chain,
+        emitter_address: emitter_address,
+    });
 }
 
 public fun remove_allowed_emitter(
@@ -210,6 +231,9 @@ public fun remove_allowed_emitter(
     emitter_chain: u16,
 ) {
     table::remove(&mut state.allowed_emitters, emitter_chain);
+    event::emit(EmitterRemovedEvent {
+        emitter_chain: emitter_chain,
+    });
 }
 
 public fun set_fee_recipient_address(
@@ -218,6 +242,9 @@ public fun set_fee_recipient_address(
     fee_recipient_address: address,
 ) {
     state.fee_recipient_address = fee_recipient_address;
+    event::emit(FeeRecipientAddressSetEvent {
+        fee_recipient_address: fee_recipient_address,
+    });
 }
 
 public fun set_fee_coin_amount(
@@ -226,6 +253,9 @@ public fun set_fee_coin_amount(
     fee_coin_amount: u64,
 ) {
     state.fee_coin_amount = fee_coin_amount;
+    event::emit(FeeAmountSetEvent {
+        fee_coin_amount: fee_coin_amount,
+    });
 }
 
 #[test_only]
