@@ -1102,7 +1102,6 @@ fun test_send_to_community() {
 
     setup_test_env(scenario);
 
-    // 设置社区地址
     ts::next_tx(scenario, ADMIN);
     {
         let super_admin = ts::take_from_sender<SuperAdmin>(scenario);
@@ -1505,7 +1504,6 @@ fun test_send_to_ecosystem_before_time_fails() {
         ts::return_to_sender(scenario, super_admin);
     };
 
-    // 尝试在 vesting_timestamp 之前发送（应该失败）
     let claim_time = VESTING_TIMESTAMP - 1000;
 
     ts::next_tx(scenario, ROBOT_ADMIN);
@@ -1543,8 +1541,6 @@ fun test_send_to_ecosystem_non_robot_admin_fails() {
     };
 
     let claim_time = VESTING_TIMESTAMP + 1000;
-
-    // USER1（非机器人管理员）尝试发送（应该失败）
     ts::next_tx(scenario, USER1);
     {
         let acl = ts::take_shared<ACL>(scenario);
@@ -1569,7 +1565,6 @@ fun test_send_to_community_before_time_fails() {
 
     setup_test_env(scenario);
 
-    // 设置社区地址
     ts::next_tx(scenario, ADMIN);
     {
         let super_admin = ts::take_from_sender<SuperAdmin>(scenario);
@@ -1606,7 +1601,6 @@ fun test_send_to_community_non_robot_admin_fails() {
 
     setup_test_env(scenario);
 
-    // 设置社区地址
     ts::next_tx(scenario, ADMIN);
     {
         let super_admin = ts::take_from_sender<SuperAdmin>(scenario);
