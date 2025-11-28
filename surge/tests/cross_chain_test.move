@@ -362,3 +362,38 @@ fun test_lock_message_serialization() {
 
     ts::end(scenario_val);
 }
+
+#[test]
+fun test_bsc_payload_deserialization() {
+    let mut scenario_val = ts::begin(ADMIN);
+    let scenario = &mut scenario_val;
+
+    setup_test_env(scenario);
+
+    // Payload: payload_id=1, sender=0xD767d7e0C68049b5C3c0869529Ce1eEB39d0c609, 
+    // recipient=0x06ab2ac6f7a1c0b747f19ec00ee6e051b89f46186a402bf8db52865082fc3577,
+    // amount=100000000000, source_chain=4, target_chain=21
+    let payload = x"01000000000000000000000000d767d7e0c68049b5c3c0869529ce1eeb39d0c60906ab2ac6f7a1c0b747f19ec00ee6e051b89f46186a402bf8db52865082fc3577000000000000000000000000000000000000000000000000000000174876e80000040015";
+    
+    // Expected values
+    let expected_amount: u256 = 100000000000;
+    let expected_sender_bytes = x"000000000000000000000000d767d7e0c68049b5c3c0869529ce1eeb39d0c609";
+    let expected_sender = external_address::new(wormhole::bytes32::from_bytes(expected_sender_bytes));
+    let expected_recipient_bytes = x"06ab2ac6f7a1c0b747f19ec00ee6e051b89f46186a402bf8db52865082fc3577";
+    let expected_recipient = external_address::new(wormhole::bytes32::from_bytes(expected_recipient_bytes));
+    let expected_source_chain: u16 = 4;
+    let expected_target_chain: u16 = 21;
+
+    // Deserialize payload
+    let deserialized = lock_message::deserialize(payload);
+    let (deserialized_amount, deserialized_sender, deserialized_source_chain, deserialized_recipient_address, deserialized_target_chain) = lock_message::unpack(deserialized);
+    
+    // Verify deserialized values
+    assert_eq!(expected_amount, deserialized_amount);
+    assert_eq!(expected_sender, deserialized_sender);
+    assert_eq!(expected_recipient, deserialized_recipient_address);
+    assert_eq!(expected_source_chain, deserialized_source_chain);
+    assert_eq!(expected_target_chain, deserialized_target_chain);
+
+    ts::end(scenario_val);
+}

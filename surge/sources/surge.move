@@ -204,6 +204,30 @@ public fun add_allowed_emitter(
     table::add(&mut state.allowed_emitters, emitter_chain, emitter_address);
 }
 
+public fun remove_allowed_emitter(
+    _: &SuperAdmin,
+    state: &mut SurgeBridgeState,
+    emitter_chain: u16,
+) {
+    table::remove(&mut state.allowed_emitters, emitter_chain);
+}
+
+public fun set_fee_recipient_address(
+    _: &SuperAdmin,
+    state: &mut SurgeBridgeState,
+    fee_recipient_address: address,
+) {
+    state.fee_recipient_address = fee_recipient_address;
+}
+
+public fun set_fee_coin_amount(
+    _: &SuperAdmin,
+    state: &mut SurgeBridgeState,
+    fee_coin_amount: u64,
+) {
+    state.fee_coin_amount = fee_coin_amount;
+}
+
 #[test_only]
 public fun nonce(state: &SurgeBridgeState): u32 {
     state.nonce

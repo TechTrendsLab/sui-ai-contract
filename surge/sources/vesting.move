@@ -22,17 +22,18 @@ const CORE_CONTRIBUTORS_AIRDROP_MONTH: u64 = 2_777_777_777_777_777;
 const LIQUIDITY_AND_LISTING: u64 = 50_000_000_000_000_000;
 const AIRDROP: u64 = 80_000_000_000_000_000;
 
-const EInvalidState: u64 = 0;
-const EInvalidAddress: u64 = 1;
-const EAlreadyLiquidityAndListing: u64 = 2;
-const EInvalidTime: u64 = 3;
-const EInvalidLength: u64 = 4;
-const EInvalidAddressAndValueLength: u64 = 5;
-const EInvalidTgeTimestamp: u64 = 6;
-const EOverAirdropAmount: u64 = 7;
-const EAlreadyExistAdmin: u64 = 8;
-const EAlreadySetTgeTimestamp: u64 = 9;
-const EInvalidVersion: u64 = 10;
+const EInvalidAddress: u64 = 0;
+const EAlreadyLiquidityAndListing: u64 = 1;
+const EInvalidTime: u64 = 2;
+const EInvalidLength: u64 = 3;
+const EInvalidAddressAndValueLength: u64 = 4;
+const EInvalidTgeTimestamp: u64 = 5;
+const EOverAirdropAmount: u64 = 6;
+const EAlreadyExistAdmin: u64 = 7;
+const EAlreadySetTgeTimestamp: u64 = 8;
+const EInvalidVersion: u64 = 9;
+const EInvalidAddressInAirdropTable: u64 = 10;
+const ERecipientIsZeroAddress: u64 = 11;
 
 public struct ACL has key {
     id: UID,
@@ -210,6 +211,7 @@ public fun send_to_early_backers(
     ctx: &mut TxContext,
 ) {
     assert!(config.version == VERSION, EInvalidVersion);
+    assert!(config.surge_address_config.early_backers != @0x0, ERecipientIsZeroAddress);
     assert!(vector::contains(&acl.robot_admin, &ctx.sender()), EInvalidAddress);
     assert!(
         clock::timestamp_ms(clock) >= config.surge_address_config.early_backers_can_claim_timestamp 
@@ -235,6 +237,7 @@ public fun send_to_core_contributors(
     ctx: &mut TxContext,
 ) {
     assert!(config.version == VERSION, EInvalidVersion);
+    assert!(config.surge_address_config.core_contributors != @0x0, ERecipientIsZeroAddress);
     assert!(vector::contains(&acl.robot_admin, &ctx.sender()), EInvalidAddress);
     assert!(
         clock::timestamp_ms(clock) >= config.surge_address_config.core_contributors_can_claim_timestamp 
@@ -260,6 +263,7 @@ public fun send_to_ecosystem(
     ctx: &mut TxContext,
 ) {
     assert!(config.version == VERSION, EInvalidVersion);
+    assert!(config.surge_address_config.ecosystem != @0x0, ERecipientIsZeroAddress);
     assert!(vector::contains(&acl.robot_admin, &ctx.sender()), EInvalidAddress);
     assert!(
         clock::timestamp_ms(clock) >= config.surge_address_config.ecosystem_can_claim_timestamp
@@ -285,6 +289,7 @@ public fun send_to_community(
     ctx: &mut TxContext,
 ) {
     assert!(config.version == VERSION, EInvalidVersion);
+    assert!(config.surge_address_config.community != @0x0, ERecipientIsZeroAddress);
     assert!(vector::contains(&acl.robot_admin, &ctx.sender()), EInvalidAddress);
     assert!(
         clock::timestamp_ms(clock) >= config.surge_address_config.community_can_claim_timestamp
@@ -331,6 +336,7 @@ public fun send_liquidity_and_listing(
     ctx: &mut TxContext,
 ) {
   let coin = send_liquidity_and_listing_coin(admin, config, clock, ctx);
+  assert!(recipient != @0x0, ERecipientIsZeroAddress);
   transfer::public_transfer(coin, recipient);
 }
 
@@ -356,6 +362,7 @@ public fun set_whitelist_admin_list(
                 state.current_airdrop_amount + value[i];
             *table::borrow_mut(&mut state.airdrop_table, whitelist_address[i]) = value[i] + *table::borrow(&state.airdrop_table, whitelist_address[i]);
         } else {
+            assert!(whitelist_address[i] != @0x0, ERecipientIsZeroAddress);
             table::add(&mut state.airdrop_table, whitelist_address[i], value[i]);
             state.current_airdrop_amount = state.current_airdrop_amount + value[i];
         };
@@ -380,6 +387,7 @@ public fun remove_whitelist_admin_list(
     assert!(vector::contains(&config.set_whitelist_admin, &ctx.sender()), EInvalidAddress);
     let mut i = 0;
     while (i < whitelist_address.length()) {
+        assert!(table::contains(&state.airdrop_table, whitelist_address[i]), EInvalidAddressInAirdropTable);
         state.current_airdrop_amount =
             state.current_airdrop_amount - *table::borrow(&state.airdrop_table, whitelist_address[i]);
         table::remove(&mut state.airdrop_table, whitelist_address[i]);
