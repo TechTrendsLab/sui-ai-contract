@@ -1,0 +1,15 @@
+{
+  "address": "0xB4899427b29c6A0773d9F3785a07038Ad1e464De",
+  "network": "bsc",
+  "chainId": 56,
+  "deployer": "0xEf5f33b5dc37d6DC609cB1b398fb199ED9F355Ce",
+  "txHash": "0x1efebe444879b0152334d1bbea103c04043047271fd0a6972f71647551be65ff",
+  "blockNumber": 70441515,
+  "timestamp": 1764832695247,
+  "surgeToken": "0x56EB432Ef701908ca88317065Ff203beB302c639",
+  "wormholeCore": "0x98f3c9e6E3fAce36bAAd05FE09d375Ef1464288B",
+  "wormholeChainId": 4,
+  "consistencyLevel": 201,
+  "feeRecipient": "0xEf5f33b5dc37d6DC609cB1b398fb199ED9F355Ce",
+  "minFee": "0"
+}

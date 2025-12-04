@@ -19,8 +19,8 @@ module.exports = {
       chainId: 1337
     },
     bsc: {
-      //url: "https://bsc-dataseed1.binance.org/",
-      url:"https://bnb-testnet.g.alchemy.com/v2/KS5hJx7LOvIvc5jj9ybf9",
+      url: "https://bsc-dataseed.binance.org/",    
+      //url:"https://bnb-testnet.g.alchemy.com/v2/KS5hJx7LOvIvc5jj9ybf9",
       chainId: 56,
       accounts
     },

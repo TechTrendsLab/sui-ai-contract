@@ -51,7 +51,7 @@ async function main() {
 
     const {
         SURGE_TOKEN,
-        CONSISTENCY_LEVEL = "200",
+        CONSISTENCY_LEVEL = "201",
         INITIAL_OWNER,
         FEE_RECIPIENT,
         MIN_FEE = "0" // 默认 0

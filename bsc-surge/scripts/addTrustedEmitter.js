@@ -4,14 +4,14 @@ async function main() {
     // ========== 配置区域：请在这里修改要添加的 emitter 地址 ==========
     
     // Executor 合约地址（如果部署在不同网络，请修改此地址）
-    const EXECUTOR_ADDRESS = "0xED23281b0902AA40C53154dFeEA277F38070782e";
+    const EXECUTOR_ADDRESS = "0xB4899427b29c6A0773d9F3785a07038Ad1e464De";
     
     // 要添加的 emitter 配置
     // 格式：{ chainId: Wormhole链ID, emitter: "0x..." 地址（20字节或32字节格式都可以）}
     const EMITTERS_TO_ADD = [
         {
             chainId: 21,  // 例如：以太坊主网的 Wormhole Chain ID
-            emitter: "0xad2816e9f17b6b6c6684b1b7269c7e693e3fbc6c970d5a4ad37eee441db0df06"  // 请替换为实际的 emitter 地址
+            emitter: "0x68c708c6403331662b8dce33d0a4b85d60df9d5a126ef19b97699f1e13d741d"  // 请替换为实际的 emitter 地址
         },
         // 可以添加多个 emitter
         // {
