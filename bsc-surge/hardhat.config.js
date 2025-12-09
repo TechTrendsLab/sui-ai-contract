@@ -45,6 +45,9 @@ module.exports = {
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY
   },
+  sourcify: {
+    enabled: true
+  },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
     currency: "USD",

@@ -1,9 +1,9 @@
 {
-  "address": "0x56EB432Ef701908ca88317065Ff203beB302c639",
+  "address": "0xaaC01D3753A72c73872EC8D6394B48F542Fe313f",
   "network": "bsc",
   "chainId": 56,
   "deployer": "0xEf5f33b5dc37d6DC609cB1b398fb199ED9F355Ce",
-  "txHash": "0x632f93207c45ff670edd74e245d349918a1b73217c4b72a4f70cae588eb68d14",
-  "blockNumber": 70441507,
-  "timestamp": 1764832690355
+  "txHash": "0xf2c1cc62ca0507e995addeb2ceafa48e5ca304443aad6a4af437b7aa12f64bc6",
+  "blockNumber": 70449993,
+  "timestamp": 1764839055364
 }
